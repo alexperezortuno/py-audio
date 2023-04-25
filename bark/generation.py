@@ -19,7 +19,6 @@ from .model import GPTConfig, GPT
 from .model_fine import FineGPT, FineGPTConfig
 
 # os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:508M"
-os.environ["SUNO_USE_SMALL_MODELS"] = "True"
 
 if (
     torch.cuda.is_available() and

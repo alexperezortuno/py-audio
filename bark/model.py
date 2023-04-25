@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
+
 class LayerNorm(nn.Module):
     """ LayerNorm but with an optional bias. PyTorch doesn't support simply bias=False """
 
@@ -19,6 +20,7 @@ class LayerNorm(nn.Module):
 
     def forward(self, input):
         return F.layer_norm(input, self.weight.shape, self.weight, self.bias, 1e-5)
+
 
 class CausalSelfAttention(nn.Module):
 
@@ -41,16 +43,16 @@ class CausalSelfAttention(nn.Module):
             # print("WARNING: using slow attention. Flash Attention atm needs PyTorch nightly and dropout=0.0")
             # causal mask to ensure that attention is only applied to the left in the input sequence
             self.register_buffer("bias", torch.tril(torch.ones(config.block_size, config.block_size))
-                                        .view(1, 1, config.block_size, config.block_size))
+                                 .view(1, 1, config.block_size, config.block_size))
 
     def forward(self, x, past_kv=None, use_cache=False):
-        B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
+        B, T, C = x.size()  # batch size, sequence length, embedding dimensionality (n_embd)
 
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
-        q, k ,v  = self.c_attn(x).split(self.n_embd, dim=2)
-        k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-        q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-        v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
+        k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)  # (B, nh, T, hs)
+        q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)  # (B, nh, T, hs)
+        v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)  # (B, nh, T, hs)
 
         if past_kv is not None:
             past_key = past_kv[0]
@@ -81,22 +83,23 @@ class CausalSelfAttention(nn.Module):
         else:
             # manual implementation of attention
             att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
-            att = att.masked_fill(self.bias[:,:,FULL_T-T:FULL_T,:FULL_T] == 0, float('-inf'))
+            att = att.masked_fill(self.bias[:, :, FULL_T - T:FULL_T, :FULL_T] == 0, float('-inf'))
             att = F.softmax(att, dim=-1)
             att = self.attn_dropout(att)
-            y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
-        y = y.transpose(1, 2).contiguous().view(B, T, C) # re-assemble all head outputs side by side
+            y = att @ v  # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
+        y = y.transpose(1, 2).contiguous().view(B, T, C)  # re-assemble all head outputs side by side
 
         # output projection
         y = self.resid_dropout(self.c_proj(y))
-        return (y, present)
+        return y, present
+
 
 class MLP(nn.Module):
 
     def __init__(self, config):
         super().__init__()
-        self.c_fc    = nn.Linear(config.n_embd, 4 * config.n_embd, bias=config.bias)
-        self.c_proj  = nn.Linear(4 * config.n_embd, config.n_embd, bias=config.bias)
+        self.c_fc = nn.Linear(config.n_embd, 4 * config.n_embd, bias=config.bias)
+        self.c_proj = nn.Linear(4 * config.n_embd, config.n_embd, bias=config.bias)
         self.dropout = nn.Dropout(config.dropout)
         self.gelu = nn.GELU()
 
@@ -106,6 +109,7 @@ class MLP(nn.Module):
         x = self.c_proj(x)
         x = self.dropout(x)
         return x
+
 
 class Block(nn.Module):
 
@@ -121,7 +125,8 @@ class Block(nn.Module):
         attn_output, prev_kvs = self.attn(self.ln_1(x), past_kv=past_kv, use_cache=use_cache)
         x = x + attn_output
         x = x + self.mlp(self.ln_2(x))
-        return (x, prev_kvs)
+        return x, prev_kvs
+
 
 @dataclass
 class GPTConfig:
@@ -132,7 +137,8 @@ class GPTConfig:
     n_head: int = 12
     n_embd: int = 768
     dropout: float = 0.0
-    bias: bool = True # True: bias in Linears and LayerNorms, like GPT-2. False: a bit better and faster
+    bias: bool = True  # True: bias in Linears and LayerNorms, like GPT-2. False: a bit better and faster
+
 
 class GPT(nn.Module):
 
@@ -144,11 +150,11 @@ class GPT(nn.Module):
         self.config = config
 
         self.transformer = nn.ModuleDict(dict(
-            wte = nn.Embedding(config.input_vocab_size, config.n_embd),
-            wpe = nn.Embedding(config.block_size, config.n_embd),
-            drop = nn.Dropout(config.dropout),
-            h = nn.ModuleList([Block(config, idx) for idx in range(config.n_layer)]),
-            ln_f = LayerNorm(config.n_embd, bias=config.bias),
+            wte=nn.Embedding(config.input_vocab_size, config.n_embd),
+            wpe=nn.Embedding(config.block_size, config.n_embd),
+            drop=nn.Dropout(config.dropout),
+            h=nn.ModuleList([Block(config, idx) for idx in range(config.n_layer)]),
+            ln_f=LayerNorm(config.n_embd, bias=config.bias),
         ))
         self.lm_head = nn.Linear(config.n_embd, config.output_vocab_size, bias=False)
 
@@ -170,10 +176,10 @@ class GPT(nn.Module):
         b, t = idx.size()
         if past_kv is not None:
             assert t == 1
-            tok_emb = self.transformer.wte(idx) # token embeddings of shape (b, t, n_embd)
+            tok_emb = self.transformer.wte(idx)  # token embeddings of shape (b, t, n_embd)
         else:
             if merge_context:
-                assert(idx.shape[1] >= 256+256+1)
+                assert (idx.shape[1] >= 256 + 256 + 1)
                 t = idx.shape[1] - 256
             else:
                 assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
@@ -181,11 +187,11 @@ class GPT(nn.Module):
             # forward the GPT model itself
             if merge_context:
                 tok_emb = torch.cat([
-                    self.transformer.wte(idx[:,:256]) + self.transformer.wte(idx[:,256:256+256]),
-                    self.transformer.wte(idx[:,256+256:])
+                    self.transformer.wte(idx[:, :256]) + self.transformer.wte(idx[:, 256:256 + 256]),
+                    self.transformer.wte(idx[:, 256 + 256:])
                 ], dim=1)
             else:
-                tok_emb = self.transformer.wte(idx) # token embeddings of shape (b, t, n_embd)
+                tok_emb = self.transformer.wte(idx)  # token embeddings of shape (b, t, n_embd)
 
         if past_kv is None:
             past_length = 0
@@ -195,11 +201,10 @@ class GPT(nn.Module):
 
         if position_ids is None:
             position_ids = torch.arange(past_length, t + past_length, dtype=torch.long, device=device)
-            position_ids = position_ids.unsqueeze(0) # shape (1, t)
+            position_ids = position_ids.unsqueeze(0)  # shape (1, t)
             assert position_ids.shape == (1, t)
 
-        pos_emb = self.transformer.wpe(position_ids) # position embeddings of shape (1, t, n_embd)
-
+        pos_emb = self.transformer.wpe(position_ids)  # position embeddings of shape (1, t, n_embd)
 
         x = self.transformer.drop(tok_emb + pos_emb)
 
@@ -214,6 +219,6 @@ class GPT(nn.Module):
         x = self.transformer.ln_f(x)
 
         # inference-time mini-optimization: only forward the lm_head on the very last position
-        logits = self.lm_head(x[:, [-1], :]) # note: using list [-1] to preserve the time dim
+        logits = self.lm_head(x[:, [-1], :])  # note: using list [-1] to preserve the time dim
 
-        return (logits, new_kv)
+        return logits, new_kv
