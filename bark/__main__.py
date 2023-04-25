@@ -9,16 +9,16 @@ import sounddevice as sd
 import soundfile as sf
 
 
-def start(params: Dict) -> None:
+def start(data: Dict) -> None:
     # download and load all models
     preload_models(
-        text_use_gpu=params['text_use_gpu'],
-        text_use_small=params['text_use_small'],
-        coarse_use_gpu=params['coarse_use_gpu'],
-        coarse_use_small=params['coarse_use_small'],
-        fine_use_gpu=params['fine_use_gpu'],
-        fine_use_small=params['fine_use_small'],
-        codec_use_gpu=params['codec_use_gpu'],
+        text_use_gpu=data['text_use_gpu'],
+        text_use_small=data['text_use_small'],
+        coarse_use_gpu=data['coarse_use_gpu'],
+        coarse_use_small=data['coarse_use_small'],
+        fine_use_gpu=data['fine_use_gpu'],
+        fine_use_small=data['fine_use_small'],
+        codec_use_gpu=data['codec_use_gpu'],
     )
 
     # generate audio from text
@@ -40,11 +40,11 @@ def start(params: Dict) -> None:
         for text in text_prompt:
             audio_array = generate_audio(text, history_prompt="es_speaker_1")
 
-            if params['play_audio']:
-                sd.play(audio_array, params['sample_rate'])
+            if data['play_audio']:
+                sd.play(audio_array, data['sample_rate'])
                 sd.wait()
 
-            sf.write(f'{re.sub("[?¿!¡,.]", "", text).replace(" ", "_").lower()}.wav', audio_array, params['sample_rate'])
+            sf.write(f'{re.sub("[?¿!¡,.]", "", text).replace(" ", "_").lower()}.wav', audio_array, data['sample_rate'])
             audio_array = None
     except Exception as e:
         raise e
