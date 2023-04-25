@@ -28,7 +28,7 @@ class NonCausalSelfAttention(nn.Module):
         self.dropout = config.dropout
         # flash attention make GPU go brrrrr but support is only in PyTorch nightly and still a bit scary
         self.flash = (
-            hasattr(torch.nn.functional, "scaled_dot_product_attention") and self.dropout == 0.0
+                hasattr(torch.nn.functional, "scaled_dot_product_attention") and self.dropout == 0.0
         )
 
     def forward(self, x):
@@ -108,7 +108,7 @@ class FineGPT(GPT):
         device = idx.device
         b, t, codes = idx.size()
         assert (
-            t <= self.config.block_size
+                t <= self.config.block_size
         ), f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
         assert pred_idx > 0, "cannot predict 0th codebook"
         assert codes == self.n_codes_total, (b, t, codes)

@@ -18,14 +18,13 @@ from transformers import BertTokenizer
 from .model import GPTConfig, GPT
 from .model_fine import FineGPT, FineGPTConfig
 
-# os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:508M"
 
 if (
-    torch.cuda.is_available() and
-    hasattr(torch.cuda, "amp") and
-    hasattr(torch.cuda.amp, "autocast") and
-    hasattr(torch.cuda, "is_bf16_supported") and
-    torch.cuda.is_bf16_supported()
+        torch.cuda.is_available() and
+        hasattr(torch.cuda, "amp") and
+        hasattr(torch.cuda.amp, "autocast") and
+        hasattr(torch.cuda, "is_bf16_supported") and
+        torch.cuda.is_bf16_supported()
 ):
     torch.cuda.empty_cache()
     torch.cuda.memory_summary(device=None, abbreviated=False)
@@ -35,11 +34,9 @@ else:
     def autocast():
         yield
 
-
 # hold models in global scope to lazy load
 global models
 models = {}
-
 
 CONTEXT_WINDOW_SIZE = 1024
 
@@ -51,8 +48,7 @@ N_COARSE_CODEBOOKS = 2
 N_FINE_CODEBOOKS = 8
 COARSE_RATE_HZ = 75
 
-SAMPLE_RATE = 24_000
-
+SAMPLE_RATE: int = 24_000
 
 SUPPORTED_LANGS = [
     ("English", "en"),
@@ -75,16 +71,12 @@ for _, lang in SUPPORTED_LANGS:
     for n in range(10):
         ALLOWED_PROMPTS.add(f"{lang}_speaker_{n}")
 
-
 logger = logging.getLogger(__name__)
-
 
 CUR_PATH = os.path.dirname(os.path.abspath(__file__))
 
-
 default_cache_dir = os.path.join(os.path.expanduser("~"), ".cache")
 CACHE_DIR = os.path.join(os.getenv("XDG_CACHE_HOME", default_cache_dir), "suno", "bark_v0")
-
 
 USE_SMALL_MODELS = os.environ.get("SUNO_USE_SMALL_MODELS", False)
 
@@ -116,7 +108,6 @@ REMOTE_MODEL_PATHS = {
         "checksum": "59d184ed44e3650774a2f0503a48a97b",
     },
 }
-
 
 if not hasattr(torch.nn.functional, 'scaled_dot_product_attention'):
     logger.warning(
@@ -227,8 +218,8 @@ def _load_model(ckpt_path, device, use_small=False, model_type="text"):
     model_key = f"{model_type}_small" if use_small or USE_SMALL_MODELS else model_type
     model_info = REMOTE_MODEL_PATHS[model_key]
     if (
-        os.path.exists(ckpt_path) and
-        _md5(ckpt_path) != model_info["checksum"]
+            os.path.exists(ckpt_path) and
+            _md5(ckpt_path) != model_info["checksum"]
     ):
         logger.warning(f"found outdated {model_type} model, removing.")
         os.remove(ckpt_path)
@@ -249,7 +240,7 @@ def _load_model(ckpt_path, device, use_small=False, model_type="text"):
     unwanted_prefix = "_orig_mod."
     for k, v in list(state_dict.items()):
         if k.startswith(unwanted_prefix):
-            state_dict[k[len(unwanted_prefix) :]] = state_dict.pop(k)
+            state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
     extra_keys = set(state_dict.keys()) - set(model.state_dict().keys())
     extra_keys = set([k for k in extra_keys if not k.endswith(".attn.bias")])
     missing_keys = set(model.state_dict().keys()) - set(state_dict.keys())
@@ -261,7 +252,7 @@ def _load_model(ckpt_path, device, use_small=False, model_type="text"):
     model.load_state_dict(state_dict, strict=False)
     n_params = model.get_num_params()
     val_loss = checkpoint["best_val_loss"].item()
-    logger.info(f"model loaded: {round(n_params/1e6,1)}M params, {round(val_loss,3)} loss")
+    logger.info(f"model loaded: {round(n_params / 1e6, 1)}M params, {round(val_loss, 3)} loss")
     model.eval()
     model.to(device)
     del checkpoint, state_dict
@@ -317,14 +308,14 @@ def load_codec_model(use_gpu=True, force_reload=False):
 
 
 def preload_models(
-    text_use_gpu=True,
-    text_use_small=False,
-    coarse_use_gpu=True,
-    coarse_use_small=False,
-    fine_use_gpu=True,
-    fine_use_small=False,
-    codec_use_gpu=True,
-    force_reload=False,
+        text_use_gpu=True,
+        text_use_small=False,
+        coarse_use_gpu=True,
+        coarse_use_small=False,
+        fine_use_gpu=True,
+        fine_use_small=False,
+        codec_use_gpu=True,
+        force_reload=False,
 ):
     _ = load_model(
         model_type="text", use_gpu=text_use_gpu, use_small=text_use_small, force_reload=force_reload
@@ -365,18 +356,18 @@ SEMANTIC_INFER_TOKEN = 129_599
 
 
 def generate_text_semantic(
-    text,
-    history_prompt=None,
-    temp=0.7,
-    top_k=None,
-    top_p=None,
-    use_gpu=True,
-    silent=False,
-    min_eos_p=0.2,
-    max_gen_duration_s=None,
-    allow_early_stop=True,
-    model=None,
-    use_kv_caching=False
+        text,
+        history_prompt=None,
+        temp=0.7,
+        top_k=None,
+        top_p=None,
+        use_gpu=True,
+        silent=False,
+        min_eos_p=0.2,
+        max_gen_duration_s=None,
+        allow_early_stop=True,
+        model=None,
+        use_kv_caching=False
 ):
     """Generate semantic tokens from text."""
     assert isinstance(text, str)
@@ -391,11 +382,11 @@ def generate_text_semantic(
                 os.path.join(CUR_PATH, "assets", "prompts", f"{history_prompt}.npz")
             )["semantic_prompt"]
         assert (
-            isinstance(semantic_history, np.ndarray)
-            and len(semantic_history.shape) == 1
-            and len(semantic_history) > 0
-            and semantic_history.min() >= 0
-            and semantic_history.max() <= SEMANTIC_VOCAB_SIZE - 1
+                isinstance(semantic_history, np.ndarray)
+                and len(semantic_history.shape) == 1
+                and len(semantic_history) > 0
+                and semantic_history.min() >= 0
+                and semantic_history.max() <= SEMANTIC_VOCAB_SIZE - 1
         )
     else:
         semantic_history = None
@@ -471,8 +462,8 @@ def generate_text_semantic(
             probs = F.softmax(relevant_logits / temp, dim=-1)
             item_next = torch.multinomial(probs, num_samples=1)
             if allow_early_stop and (
-                item_next == SEMANTIC_VOCAB_SIZE
-                or (min_eos_p is not None and probs[-1] >= min_eos_p)
+                    item_next == SEMANTIC_VOCAB_SIZE
+                    or (min_eos_p is not None and probs[-1] >= min_eos_p)
             ):
                 # eos found, so break
                 pbar.update(100 - pbar_state)
@@ -491,7 +482,7 @@ def generate_text_semantic(
                 pbar.update(req_pbar_state - pbar_state)
             pbar_state = req_pbar_state
         pbar.close()
-        out = x.detach().cpu().numpy().squeeze()[256 + 256 + 1 :]
+        out = x.detach().cpu().numpy().squeeze()[256 + 256 + 1:]
     assert all(0 <= out) and all(out < SEMANTIC_VOCAB_SIZE)
     _clear_cuda_cache()
     return out
@@ -512,25 +503,25 @@ COARSE_INFER_TOKEN = 12_050
 
 
 def generate_coarse(
-    x_semantic,
-    history_prompt=None,
-    temp=0.7,
-    top_k=None,
-    top_p=None,
-    use_gpu=True,
-    silent=False,
-    max_coarse_history=630,  # min 60 (faster), max 630 (more context)
-    sliding_window_len=60,
-    model=None,
-    use_kv_caching=False
+        x_semantic,
+        history_prompt=None,
+        temp=0.7,
+        top_k=None,
+        top_p=None,
+        use_gpu=True,
+        silent=False,
+        max_coarse_history=630,  # min 60 (faster), max 630 (more context)
+        sliding_window_len=60,
+        model=None,
+        use_kv_caching=False
 ):
     """Generate coarse audio codes from semantic tokens."""
     assert (
-        isinstance(x_semantic, np.ndarray)
-        and len(x_semantic.shape) == 1
-        and len(x_semantic) > 0
-        and x_semantic.min() >= 0
-        and x_semantic.max() <= SEMANTIC_VOCAB_SIZE - 1
+            isinstance(x_semantic, np.ndarray)
+            and len(x_semantic.shape) == 1
+            and len(x_semantic) > 0
+            and x_semantic.min() >= 0
+            and x_semantic.max() <= SEMANTIC_VOCAB_SIZE - 1
     )
     assert 60 <= max_coarse_history <= 630
     assert max_coarse_history + sliding_window_len <= 1024 - 256
@@ -547,21 +538,21 @@ def generate_coarse(
         x_semantic_history = x_history["semantic_prompt"]
         x_coarse_history = x_history["coarse_prompt"]
         assert (
-            isinstance(x_semantic_history, np.ndarray)
-            and len(x_semantic_history.shape) == 1
-            and len(x_semantic_history) > 0
-            and x_semantic_history.min() >= 0
-            and x_semantic_history.max() <= SEMANTIC_VOCAB_SIZE - 1
-            and isinstance(x_coarse_history, np.ndarray)
-            and len(x_coarse_history.shape) == 2
-            and x_coarse_history.shape[0] == N_COARSE_CODEBOOKS
-            and x_coarse_history.shape[-1] >= 0
-            and x_coarse_history.min() >= 0
-            and x_coarse_history.max() <= CODEBOOK_SIZE - 1
-            and (
-                round(x_coarse_history.shape[-1] / len(x_semantic_history), 1)
-                == round(semantic_to_coarse_ratio / N_COARSE_CODEBOOKS, 1)
-            )
+                isinstance(x_semantic_history, np.ndarray)
+                and len(x_semantic_history.shape) == 1
+                and len(x_semantic_history) > 0
+                and x_semantic_history.min() >= 0
+                and x_semantic_history.max() <= SEMANTIC_VOCAB_SIZE - 1
+                and isinstance(x_coarse_history, np.ndarray)
+                and len(x_coarse_history.shape) == 2
+                and x_coarse_history.shape[0] == N_COARSE_CODEBOOKS
+                and x_coarse_history.shape[-1] >= 0
+                and x_coarse_history.min() >= 0
+                and x_coarse_history.max() <= CODEBOOK_SIZE - 1
+                and (
+                        round(x_coarse_history.shape[-1] / len(x_semantic_history), 1)
+                        == round(semantic_to_coarse_ratio / N_COARSE_CODEBOOKS, 1)
+                )
         )
         x_coarse_history = _flatten_codebooks(x_coarse_history) + SEMANTIC_VOCAB_SIZE
         # trim histories correctly
@@ -602,7 +593,7 @@ def generate_coarse(
         for _ in tqdm.tqdm(range(n_window_steps), total=n_window_steps, disable=silent):
             semantic_idx = base_semantic_idx + int(round(n_step / semantic_to_coarse_ratio))
             # pad from right side
-            x_in = x_semantic_in[:, np.max([0, semantic_idx - max_semantic_history]) :]
+            x_in = x_semantic_in[:, np.max([0, semantic_idx - max_semantic_history]):]
             x_in = x_in[:, :256]
             x_in = F.pad(
                 x_in,
@@ -630,10 +621,10 @@ def generate_coarse(
 
                 logits, kv_cache = model(x_input, use_cache=use_kv_caching, past_kv=kv_cache)
                 logit_start_idx = (
-                    SEMANTIC_VOCAB_SIZE + (1 - int(is_major_step)) * CODEBOOK_SIZE
+                        SEMANTIC_VOCAB_SIZE + (1 - int(is_major_step)) * CODEBOOK_SIZE
                 )
                 logit_end_idx = (
-                    SEMANTIC_VOCAB_SIZE + (2 - int(is_major_step)) * CODEBOOK_SIZE
+                        SEMANTIC_VOCAB_SIZE + (2 - int(is_major_step)) * CODEBOOK_SIZE
                 )
                 relevant_logits = logits[0, 0, logit_start_idx:logit_end_idx]
                 if top_p is not None:
@@ -662,7 +653,7 @@ def generate_coarse(
                 n_step += 1
             del x_in
         del x_semantic_in
-    gen_coarse_arr = x_coarse_in.detach().cpu().numpy().squeeze()[len(x_coarse_history) :]
+    gen_coarse_arr = x_coarse_in.detach().cpu().numpy().squeeze()[len(x_coarse_history):]
     del x_coarse_in
     assert len(gen_coarse_arr) == n_steps
     gen_coarse_audio_arr = gen_coarse_arr.reshape(-1, N_COARSE_CODEBOOKS).T - SEMANTIC_VOCAB_SIZE
@@ -673,21 +664,21 @@ def generate_coarse(
 
 
 def generate_fine(
-    x_coarse_gen,
-    history_prompt=None,
-    temp=0.5,
-    use_gpu=True,
-    silent=True,
-    model=None,
+        x_coarse_gen,
+        history_prompt=None,
+        temp=0.5,
+        use_gpu=True,
+        silent=True,
+        model=None,
 ):
     """Generate full audio codes from coarse audio codes."""
     assert (
-        isinstance(x_coarse_gen, np.ndarray)
-        and len(x_coarse_gen.shape) == 2
-        and 1 <= x_coarse_gen.shape[0] <= N_FINE_CODEBOOKS - 1
-        and x_coarse_gen.shape[1] > 0
-        and x_coarse_gen.min() >= 0
-        and x_coarse_gen.max() <= CODEBOOK_SIZE - 1
+            isinstance(x_coarse_gen, np.ndarray)
+            and len(x_coarse_gen.shape) == 2
+            and 1 <= x_coarse_gen.shape[0] <= N_FINE_CODEBOOKS - 1
+            and x_coarse_gen.shape[1] > 0
+            and x_coarse_gen.min() >= 0
+            and x_coarse_gen.max() <= CODEBOOK_SIZE - 1
     )
     if history_prompt is not None:
         if history_prompt.endswith(".npz"):
@@ -698,12 +689,12 @@ def generate_fine(
                 os.path.join(CUR_PATH, "assets", "prompts", f"{history_prompt}.npz")
             )["fine_prompt"]
         assert (
-            isinstance(x_fine_history, np.ndarray)
-            and len(x_fine_history.shape) == 2
-            and x_fine_history.shape[0] == N_FINE_CODEBOOKS
-            and x_fine_history.shape[1] >= 0
-            and x_fine_history.min() >= 0
-            and x_fine_history.max() <= CODEBOOK_SIZE - 1
+                isinstance(x_fine_history, np.ndarray)
+                and len(x_fine_history.shape) == 2
+                and x_fine_history.shape[0] == N_FINE_CODEBOOKS
+                and x_fine_history.shape[1] >= 0
+                and x_fine_history.min() >= 0
+                and x_fine_history.max() <= CODEBOOK_SIZE - 1
         )
     else:
         x_fine_history = None
@@ -749,7 +740,7 @@ def generate_fine(
             start_idx = np.min([n * 512, in_arr.shape[0] - 1024])
             start_fill_idx = np.min([n_history + n * 512, in_arr.shape[0] - 512])
             rel_start_fill_idx = start_fill_idx - start_idx
-            in_buffer = in_arr[start_idx : start_idx + 1024, :][None]
+            in_buffer = in_arr[start_idx: start_idx + 1024, :][None]
             for nn in range(n_coarse, N_FINE_CODEBOOKS):
                 logits = model(nn, in_buffer)
                 if temp is None:
@@ -769,7 +760,7 @@ def generate_fine(
             # transfer over info into model_in and convert to numpy
             for nn in range(n_coarse, N_FINE_CODEBOOKS):
                 in_arr[
-                    start_fill_idx : start_fill_idx + (1024 - rel_start_fill_idx), nn
+                start_fill_idx: start_fill_idx + (1024 - rel_start_fill_idx), nn
                 ] = in_buffer[0, rel_start_fill_idx:, nn]
             del in_buffer
         gen_fine_arr = in_arr.detach().cpu().numpy().squeeze().T

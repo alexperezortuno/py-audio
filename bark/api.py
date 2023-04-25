@@ -6,10 +6,10 @@ from .generation import codec_decode, generate_coarse, generate_fine, generate_t
 
 
 def text_to_semantic(
-    text: str,
-    history_prompt: Optional[str] = None,
-    temp: float = 0.7,
-    silent: bool = False,
+        text: str,
+        history_prompt: Optional[str] = None,
+        temp: float = 0.7,
+        silent: bool = False,
 ):
     """Generate semantic array from text.
 
@@ -33,11 +33,11 @@ def text_to_semantic(
 
 
 def semantic_to_waveform(
-    semantic_tokens: np.ndarray,
-    history_prompt: Optional[str] = None,
-    temp: float = 0.7,
-    silent: bool = False,
-    output_full: bool = False,
+        semantic_tokens: np.ndarray,
+        history_prompt: Optional[str] = None,
+        temp: float = 0.7,
+        silent: bool = False,
+        output_full: bool = False,
 ):
     """Generate audio array from semantic input.
 
@@ -75,21 +75,21 @@ def semantic_to_waveform(
 
 
 def save_as_prompt(filepath, full_generation):
-    assert(filepath.endswith(".npz"))
-    assert(isinstance(full_generation, dict))
-    assert("semantic_prompt" in full_generation)
-    assert("coarse_prompt" in full_generation)
-    assert("fine_prompt" in full_generation)
+    assert (filepath.endswith(".npz"))
+    assert (isinstance(full_generation, dict))
+    assert ("semantic_prompt" in full_generation)
+    assert ("coarse_prompt" in full_generation)
+    assert ("fine_prompt" in full_generation)
     np.savez(filepath, **full_generation)
 
 
 def generate_audio(
-    text: str,
-    history_prompt: Optional[str] = None,
-    text_temp: float = 0.7,
-    waveform_temp: float = 0.7,
-    silent: bool = False,
-    output_full: bool = False,
+        text: str,
+        history_prompt: Optional[str] = None,
+        text_temp: float = 0.7,
+        waveform_temp: float = 0.7,
+        silent: bool = False,
+        output_full: bool = False,
 ):
     """Generate audio array from input text.
 
