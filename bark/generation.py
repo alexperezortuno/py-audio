@@ -18,6 +18,9 @@ from transformers import BertTokenizer
 from .model import GPTConfig, GPT
 from .model_fine import FineGPT, FineGPTConfig
 
+# os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:508M"
+os.environ["SUNO_USE_SMALL_MODELS"] = "True"
+
 if (
     torch.cuda.is_available() and
     hasattr(torch.cuda, "amp") and
@@ -25,6 +28,8 @@ if (
     hasattr(torch.cuda, "is_bf16_supported") and
     torch.cuda.is_bf16_supported()
 ):
+    torch.cuda.empty_cache()
+    torch.cuda.memory_summary(device=None, abbreviated=False)
     autocast = funcy.partial(torch.cuda.amp.autocast, dtype=torch.bfloat16)
 else:
     @contextlib.contextmanager
