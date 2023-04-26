@@ -1,4 +1,7 @@
 __pycache__/
 .idea/
 *.wav
+*.mp3
+venv/
+env/
 suno_bark.egg-info/

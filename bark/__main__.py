@@ -22,32 +22,37 @@ def start(data: Dict) -> None:
     )
 
     # generate audio from text
-    # text_prompt = """
-    #      Hello, my name is Suno. And, uh — and I like pizza. [laughs]
-    #      But I also have other interests such as playing tic tac toe.
-    # """
     # text_prompt = "Hola soy un modelo entrenado. ¡Que tenga muy buen dia!."
     text_prompt = [
-        "Hola soy un modelo entrenado. ¡Que tenga muy buen dia!.",
+        """
+         Hello, my name is Suno. And, uh — and I like pizza. [laughs]
+         But I also have other interests such as playing tic tac toe.
+        """,
+        "WOMAN: Hola soy un modelo entrenado. ¡Que tengas muy buen dia!.",
         "En que te puedo ayudar.",
-        "¿Tienes algun problema?",
+        "¿Tienes algun problema?.",
         "¿Te puedo ayudar en algo más?",
     ]
 
     try:
-        audio_array = None
-
         for text in text_prompt:
-            audio_array = generate_audio(text, history_prompt="es_speaker_1")
+            audio_array = generate_audio(text,
+                                         history_prompt=data['speaker'],
+                                         text_temp=data['temp'],
+                                         waveform_temp=data['waveform_temp'],
+                                         silent=data['silent'],
+                                         )
 
             if data['play_audio']:
                 sd.play(audio_array, data['sample_rate'])
                 sd.wait()
 
-            sf.write(f'{re.sub("[?¿!¡,.]", "", text).replace(" ", "_").lower()}.wav', audio_array, data['sample_rate'])
-            audio_array = None
-    except Exception as e:
-        raise e
+            sf.write(
+                f'{re.sub("[?¿!¡,.]", "", text.replace("WOMAN: ", "").replace("MAN: ", "")[:24]).replace(" ", "_").lower()}.wav',
+                audio_array, data['sample_rate'])
+            del audio_array
+    except Exception as ex:
+        raise ex
 
 
 if __name__ == '__main__':
@@ -65,6 +70,10 @@ if __name__ == '__main__':
     parser.add_argument("--codec_use_gpu", type=bool, default=False)
     parser.add_argument("-p", "--play_audio", type=bool, default=False)
     parser.add_argument("-s", "--sample_rate", type=int, default=SAMPLE_RATE)
+    parser.add_argument("--speaker", type=str, default="es_speaker_0")
+    parser.add_argument("-t", "--temp", type=float, default=0.7)
+    parser.add_argument("--waveform_temp", type=float, default=0.7)
+    parser.add_argument("--silent", type=bool, default=False)
     params: Dict = vars(parser.parse_args())
     try:
         start(params)
