@@ -5,3 +5,4 @@ __pycache__/
 venv/
 env/
 suno_bark.egg-info/
+src/suno-bark/

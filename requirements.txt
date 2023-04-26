@@ -57,7 +57,6 @@ six==1.16.0
 sounddevice==0.4.6
 soundfile==0.12.1
 stack-data==0.6.2
--e git+ssh://git@github.com/alexperezortuno/bark.git@3408ae2790c90812b7cdaa91473c41d262eeb10b#egg=suno_bark
 sympy==1.11.1
 tokenizers==0.13.3
 torch==2.0.0
