@@ -44,6 +44,12 @@ def start(data: Dict):
         file_path: str = f"{father_path}/{data['output']}"
         _, format_ext = os.path.splitext(file_path)
 
+        if data['format'] != format_ext:
+            file_name = os.path.splitext(os.path.basename(data['output']))[0]
+            audio = AudioSegment.from_file(file_path, format=re.sub("[.]", "", format_ext))
+            audio.export(f"{father_path}/{file_name}.{data['format']}", format=data['format'])
+            format_ext = f".{data['format']}"
+
         if data['play']:
             audio = AudioSegment.from_file(file_path, format=re.sub("[.]", "", format_ext))
             play(audio)
@@ -67,6 +73,7 @@ if __name__ == '__main__':
         parser.add_argument("--slow", type=bool, default=False, help="Slow down the audio")
         parser.add_argument("--output", type=str, default="output.mp3", help="Output file")
         parser.add_argument("-p", "--play", type=bool, default=False)
+        parser.add_argument("-f", "--format", type=str, default="mp3")
         parser.add_argument("-s", "--sample_rate", type=int, default=44_100)
         parser.add_argument("-c", "--channels", type=int, default=2)
         parser.add_argument("-r", "--record", type=bool, default=False)
