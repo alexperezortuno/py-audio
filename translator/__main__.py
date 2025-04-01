@@ -3,6 +3,7 @@ import argparse
 import sys
 import queue
 import os
+import tempfile
 
 import requests
 import numpy as np
@@ -26,10 +27,24 @@ class TranslationPrompts(Enum):
     FR = "Traduisez le texte suivant en français."
     DE = "Übersetzen Sie den folgenden Text ins Deutsche."
 
+def process_transcription(text: str, params: Dict) -> None:
+    language: str = params.get('language', 'es').upper()
+    service: str = params.get('service', 'deepseek').lower()
+
+    if text is None:
+        print("transcription failed")
+        pass
+
+    if service == "deepseek":
+        translate_with_deepseek(text, language)
+    if service == "openai":
+        translate_with_openai(text, language)
+    if service == "ollama":
+        # TODO: implement ollama connection
+        pass
 
 def callback(indata, frames, time, status):
     q.put(indata.copy())
-
 
 def transcribe_audio(file_path: str) -> str | None:
     """Transcribe audio using OpenAI's Whisper model."""
@@ -49,7 +64,6 @@ def transcribe_audio(file_path: str) -> str | None:
         print(f"Error transcribing audio: {e}")
         return None
 
-
 def start(params_record: Dict) -> None:
     """
     Record audio from the microphone and save it to a file until user stop with CTRL + D.
@@ -57,8 +71,6 @@ def start(params_record: Dict) -> None:
     :return:
     """
     output_file: str = params_record.get('output_file', 'output.wav')
-    language: str = params_record.get('language', 'es').upper()
-    service: str = params_record.get('service', 'deepseek').lower()
     text: str = params_record.get('text')
     audio_data = []
 
@@ -78,20 +90,8 @@ def start(params_record: Dict) -> None:
             wav.write(output_file, samplerate, audio_data)
             print(f"Audio saved to {output_file}")
         t = transcribe_audio(output_file)
-        t = transcribe_audio("output.wav")
 
-    if t is None:
-        print("transcription failed")
-        pass
-
-    if service == "deepseek":
-        translate_with_deepseek(t, language)
-    if service == "openai":
-        translate_with_openai(t, language)
-    if service == "ollama":
-        # TODO: implement ollama connection
-        pass
-
+    process_transcription(t, params)
 
 def translate_with_deepseek(text: str, target_language: str) -> str:
     """
@@ -116,12 +116,11 @@ def translate_with_deepseek(text: str, target_language: str) -> str:
     response = requests.post("https://api.deepseek.com/chat/completions", headers=headers, json=data)
     if response.status_code == 200:
         translation: str = response.json().get("choices")[0]["message"]["content"]
-        print("[translate]:", translation)
+        print("🌍 [translate]:", translation)
         return translation
     else:
         print(f"[ERROR]: {response.text}")
         return text  # Fallback al texto original si hay error
-
 
 def translate_with_openai(text: str, target_language: str) -> str:
     """
@@ -147,6 +146,35 @@ def translate_with_openai(text: str, target_language: str) -> str:
         print(f"[ERROR]: {e}")
         return text
 
+def continuous_recording(params: Dict) -> None:
+    """Grabación y traducción continua hasta interrupción."""
+    print("🔊 Modo continuo activado. Presiona Ctrl+C para salir.")
+    try:
+        while True:
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as temp_audio:
+                record_audio(params)
+                t = transcribe_audio(params.get("output_file"))
+                process_transcription(t, params)
+    except KeyboardInterrupt:
+        print("\n🛑 Grabación detenida.")
+
+def record_audio(params: Dict) -> None:
+    """Graba audio desde el micrófono y lo guarda en un archivo."""
+    print(f"🎙️ Grabando {params.get("chunk_duration")} segundos... (Presiona Ctrl+C para detener)")
+
+    sample_rate = params.get("samplerate")
+    output_file = params.get("output_file")
+    audio_data = sd.rec(
+        int(duration * sample_rate),
+        samplerate=sample_rate,
+        channels=1,
+        dtype='float32'
+    )
+    sd.wait()  # Espera hasta que termine la grabación
+    # Guarda el audio en formato WAV
+    import scipy.io.wavfile as wav
+    wav.write(output_file, sample_rate, audio_data)
+
 
 if __name__ == '__main__':
     try:
@@ -162,10 +190,22 @@ if __name__ == '__main__':
         parser.add_argument("-t", "--text", default="", type=str, help="Translate text directly")
         parser.add_argument("--samplerate", default=16000, type=int, help="Sampling rate")
         parser.add_argument("--channels", default=1, type=int, help="Channels")
-        parser.add_argument("--chunk", default=1024, type=int, help="Chunk size")
+        parser.add_argument("--chunk-duration", default=1024, type=int, help="Chunk size")
         parser.add_argument("--duration", default=5, type=int, help="Duration")
+        parser.add_argument("--continuous", action="store_true",
+                            help="Activa el modo grabación continua")
+        parser.add_argument("-r", "--record", action="store_true", help="Record audio")
+        parser.add_argument("--stop-and-resume", action="store_true", help="Stop recording after recording")
         params: Dict = vars(parser.parse_args())
-        start(params)
+
+        if params.get("record") and params.get("continuous"):
+            continuous_recording(params)
+        elif params.get("record"):
+            record_audio(params)
+            t: str = transcribe_audio(params.get("output_file"))
+            process_transcription(t, params)
+        else:
+            start(params)
     except KeyboardInterrupt:
         sys.exit(0)
     except Exception as ex:
