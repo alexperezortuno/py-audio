@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 import argparse
-import os
 import sys
 import queue
-import tempfile
 
 import numpy as np
 from enum import Enum

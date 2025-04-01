@@ -37,5 +37,5 @@ python -m tts -t "¡Hola como estas! " -l es -s 8000 -c 1 -f wav --output su_num
 declare the environment variable `OPENAI_API_KEY`
 
 ```shell
-python -m stt
+python -m translator
 ```
