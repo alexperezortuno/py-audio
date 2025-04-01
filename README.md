@@ -1,5 +1,25 @@
 
-Examples
+### Requirements
+
+```shell
+pip install -r requirements.txt
+```
+
+### Ubuntu
+
+```shell
+ sudo apt install libportaudio2
+```
+
+if you use conda, you can install it with:
+
+```shell
+conda install -c conda-forge gcc=12.1.0
+```
+
+---
+
+### Usage
 
 ```shell
 python -m tts -t "¡Hi, how are you doing! " -p true

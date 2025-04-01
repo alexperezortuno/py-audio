@@ -90,7 +90,7 @@ if __name__ == '__main__':
         parser = argparse.ArgumentParser(description="Text to speech",
                                          formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         subparser = parser.add_subparsers(title='Script select', dest='script_type')
-        parser.version = '0.0.0'
+        parser.version = '0.0.1'
         parser.add_argument("-v", "--version", action="version")
         parser.add_argument("-t", "--text", type=str,
                             default=None,
