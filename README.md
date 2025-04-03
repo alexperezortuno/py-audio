@@ -23,10 +23,25 @@ conda install -c conda-forge gcc=12.1.0
 
 ```shell
 python -m tts -t "¡Hi, how are you doing! " -p true
+```
+
+```shell
 python -m tts -t "¡Hola como estas! " -p true -l es
+```
+
+```shell
 python -m tts -t "¡Hola como estas! " -p true -l es
+```
+
+```shell
 python -m tts -t "¡Hola como estas! " -p true --to-lang es --output su_num_es
+```
+
+```shell
 python -m tts -t "¡Hola como estas! " -p true -l es --output su_num_es -f wav
+```
+
+```shell
 python -m tts -t "¡Hola como estas! " -l es -s 8000 -c 1 -f wav --output su_num_es -b 160
 ```
 
@@ -75,6 +90,8 @@ python -m translator --service deepseek --record --continuous --from-lang es --t
 ```shell
 python -m translator --service deepseek -r --from-lang es --to-lang en --chunk-duration 5
 ```
+
+---
 
 | Argument         | Description                                                        |
 |------------------|--------------------------------------------------------------------|
