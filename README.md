@@ -25,7 +25,7 @@ conda install -c conda-forge gcc=12.1.0
 python -m tts -t "¡Hi, how are you doing! " -p true
 python -m tts -t "¡Hola como estas! " -p true -l es
 python -m tts -t "¡Hola como estas! " -p true -l es
-python -m tts -t "¡Hola como estas! " -p true -l es --output su_num_es
+python -m tts -t "¡Hola como estas! " -p true --to-lang es --output su_num_es
 python -m tts -t "¡Hola como estas! " -p true -l es --output su_num_es -f wav
 python -m tts -t "¡Hola como estas! " -l es -s 8000 -c 1 -f wav --output su_num_es -b 160
 ```
@@ -54,20 +54,36 @@ python -m translator
 ```
 
 ```shell
-python -m translator --service openai --language es  # Use OpenAI
-python -m translator --service deepseek --language es  # Use DeepSeek
-python -m translator --service deepseek --language es -t "Am I wasting my life on a theory that can never be proven? Maybe, but how great is Game of Thrones? "
-python -m translator --service deepseek --record --language en --chunk-duration 10 # Record the translation
-python -m translator --service deepseek --record --continuous --language en --chunk-duration 10 # Record the translation continuously
+python -m translator --service openai --to-lang es  # Use OpenAI
 ```
 
-| Argument | Description |
-|----------|-------------|
-| --service | The service to use for translation. Options: `openai`, `deepseek`. |
-| --language | The language to translate to. |
-| --record | Record the translation. |
-| --continuous | Record the translation continuously. |
-| --chunk-duration | The duration of each chunk in seconds. |
-| --output | The output file name. |
-| --format | The format of the output file. Options: `wav`, `mp3`. |
+```shell
+python -m translator --service deepseek --to-lang es  # Use DeepSeek
+```
+
+```shell
+python -m translator --service deepseek --to-lang es -t "Am I wasting my life on a theory that can never be proven? Maybe, but how great is Game of Thrones? "
+```
+```shell
+python -m translator --service deepseek --record --to-lang en --chunk-duration 10 # Record the translation
+```
+
+```shell
+python -m translator --service deepseek --record --continuous --from-lang es --to-lang en --chunk-duration 10 # Record the translation continuously
+```
+
+```shell
+python -m translator --service deepseek -r --from-lang es --to-lang en --chunk-duration 5
+```
+
+| Argument         | Description                                                        |
+|------------------|--------------------------------------------------------------------|
+| --service        | The service to use for translation. Options: `openai`, `deepseek`. |
+| --to-lang        | The language to translate to.                                      |
+ | --from-lag       | The language from translate                                        |
+| --record         | Record the translation.                                            |
+| --continuous     | Record the translation continuously.                               |
+| --chunk-duration | The duration of each chunk in seconds.                             |
+| --output         | The output file name.                                              |
+| --format         | The format of the output file. Options: `wav`, `mp3`.              |
 
